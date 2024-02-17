@@ -34,7 +34,7 @@ work_meta = json.load(open("work.json"))
 
 meta = {
     "title": f'Лаб {lab_number} презентация',
-    "playlistIds": ["PLr7fi2vP83YFZEpwoitd9XlZlJHFREI3s"]
+    "playlistIds": [YOUTUBE_PLAYLIST_ID]
 }
 
 open('meta.json','w').write(json.dumps(meta))
