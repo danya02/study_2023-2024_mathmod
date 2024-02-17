@@ -277,7 +277,7 @@ coverage.xml
 pytestdebug.log
 
 # Translations
-*.mo
+#*.mo
 *.pot
 
 # Django stuff:
@@ -357,3 +357,5 @@ dmypy.json
 *.pdf
 *.docx
 *.html
+
+*.mp4
