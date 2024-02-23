@@ -1,6 +1,9 @@
 import requests
 import convert_to_requests
 
+RUTUBE_PLAYLIST_ID = "368049"
+
+
 print("Step 1: go on Rutube and copy any request as curl")
 req = convert_to_requests.curl_to_requests(input("Paste it here or empty to use request.txt: ") or open('request.txt').read())
 print(req)
@@ -24,15 +27,28 @@ sid = upload_data['sid']
 videoid = upload_data['video']
 print(f"{sid=} {videoid=}")
 
+print("Step 4: setting params")
+
+name = input("Video name:")
+
 print("Step 4: uploading video")
 
 video_path = input("Video path: ")
 
-patch = session.patch(f"https://studio.rutube.ru/api/video/{videoid}/?308&client=vl", data={"title": "broll1", "is_hidden": True, "category": "13"})
+print("Patching video...")
+patch = session.patch(f"https://studio.rutube.ru/api/video/{videoid}/?308&client=vl", data={"title": name, "is_hidden": True, "category": "13"})
 print(patch, patch.text)
 
+print("Uploading video... (may take a while)")
 req = session.post(f"https://u.rutube.ru/upload/{sid}", files={'data': open(video_path, 'rb')})
 print(req, req.text)
+
+print("Step 5: adding to playlist")
+p = session.post(f"https://studio.rutube.ru/api/playlist/custom/{RUTUBE_PLAYLIST_ID}", json={"video_ids": [videoid]})
+
+print("Done!")
+print("Your video is now at: ")
+print(f"\t{patch.json()['video_url']}")
 
 # sid needed for upload to u.rutube.ru/upload/{sid}
 # video id needed to watch progress
