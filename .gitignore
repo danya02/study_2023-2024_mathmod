@@ -359,3 +359,4 @@ dmypy.json
 *.html
 
 *.mp4
+**/addr2lineOutput.txt
