@@ -98,7 +98,7 @@ patch_work = session.patch(f"https://studio.rutube.ru/api/video/{videoid_work}/?
 patch_work.raise_for_status()
 rutube_work_info = patch_work.json()
 
-patch_present = session.patch(f"https://studio.rutube.ru/api/video/{videoid_work}/?308&client=vl", data={"title": f"Лабораторная работа {lab_number} выполнение", "is_hidden": True, "category": "13", "is_adult": True})
+patch_present = session.patch(f"https://studio.rutube.ru/api/video/{videoid_present}/?308&client=vl", data={"title": f"Лабораторная работа {lab_number} выполнение", "is_hidden": True, "category": "13", "is_adult": True})
 patch_present.raise_for_status()
 rutube_present_info = patch_work.json()
 
