@@ -13,8 +13,8 @@ YOUTUBE_PLAYLIST_ID = "PLr7fi2vP83YFZEpwoitd9XlZlJHFREI3s"
 RUTUBE_PLAYLIST_ID = "368049"
 # https://rutube.ru/plst/368049
 
-work = os.path.abspath(input("Path to work video: "))
-present = os.path.abspath(input("Path to present video: "))
+work = os.path.abspath(input("Path to work video: ").replace("'", ''))
+present = os.path.abspath(input("Path to present video: ").replace("'", ''))
 
 print("Step 2: upload videos to Youtube")
 print("Make sure that https://github.com/porjo/youtubeuploader/releases is in the current directory")
@@ -119,6 +119,7 @@ p = session.post(f"https://studio.rutube.ru/api/playlist/custom/{RUTUBE_PLAYLIST
 print(p, p.text)
 p = session.post(f"https://studio.rutube.ru/api/playlist/custom/{RUTUBE_PLAYLIST_ID}", json={"video_ids": [videoid_present]})
 print(p, p.text)
+print("N. B. This is likely to fail due to a lack of CSRF token. If so, go on https://studio.rutube.ru/videos and set playlist manually")
 
 
 input("Press enter to continue...")
