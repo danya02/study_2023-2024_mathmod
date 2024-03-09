@@ -1,14 +1,14 @@
 ---
 ## Front matter
 lang: ru-RU
-title: Структура научной презентации
-subtitle: Простейший шаблон
+title: Моделирование образования планетной системы 
+subtitle: Этап 3
 author:
-  - Кулябов Д. С.
+  - Матюхин Г. В.
+  - Генералов Д. М.
 institute:
   - Российский университет дружбы народов, Москва, Россия
-  - Объединённый институт ядерных исследований, Дубна, Россия
-date: 01 января 1970
+date: 9 марта 2024
 
 ## i18n babel
 babel-lang: russian
@@ -23,188 +23,233 @@ section-titles: true
 theme: metropolis
 header-includes:
  - \metroset{progressbar=frametitle,sectionpage=progressbar,numbering=fraction}
+ - \usepackage{fvextra}
+ - \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
  - '\makeatletter'
  - '\beamer@ignorenonframefalse'
  - '\makeatother'
 ---
 
-# Информация
+# Цель работы
 
-## Докладчик
+Провести моделирование одного из этапов эволюции Вселенной -- образование некой "солнечной" системы из межзвездного газа.
 
-:::::::::::::: {.columns align=center}
-::: {.column width="70%"}
+# Выполнение
 
-  * Кулябов Дмитрий Сергеевич
-  * д.ф.-м.н., профессор
-  * профессор кафедры прикладной информатики и теории вероятностей
-  * Российский университет дружбы народов
-  * [kulyabov-ds@rudn.ru](mailto:kulyabov-ds@rudn.ru)
-  * <https://yamadharma.github.io/ru/>
+## Репозиторий
 
-:::
-::: {.column width="30%"}
+https://github.com/danya02/study_2023-2024_mathmod/tree/master/project-group/stage3
 
-![](./image/kulyabov.jpg)
+# Julia
 
-:::
-::::::::::::::
+## Частица
 
-# Вводная часть
-
-## Актуальность
-
-- Важно донести результаты своих исследований до окружающих
-- Научная презентация --- рабочий инструмент исследователя
-- Необходимо создавать презентацию быстро
-- Желательна минимизация усилий для создания презентации
-
-## Объект и предмет исследования
-
-- Презентация как текст
-- Программное обеспечение для создания презентаций
-- Входные и выходные форматы презентаций
-
-## Цели и задачи
-
-- Создать шаблон презентации в Markdown
-- Описать алгоритм создания выходных форматов презентаций
-
-## Материалы и методы
-
-- Процессор `pandoc` для входного формата Markdown
-- Результирующие форматы
-	- `pdf`
-	- `html`
-- Автоматизация процесса создания: `Makefile`
-
-# Создание презентации
-
-## Процессор `pandoc`
-
-- Pandoc: преобразователь текстовых файлов
-- Сайт: <https://pandoc.org/>
-- Репозиторий: <https://github.com/jgm/pandoc>
-
-## Формат `pdf`
-
-- Использование LaTeX
-- Пакет для презентации: [beamer](https://ctan.org/pkg/beamer)
-- Тема оформления: `metropolis`
-
-## Код для формата `pdf`
-
-```yaml
-slide_level: 2
-aspectratio: 169
-section-titles: true
-theme: metropolis
+```julia
+mutable struct Particle
+    position
+    velocity
+    mass::Float64
+    radius::Float64
+end
 ```
 
-## Формат `html`
+## Основной цикл
 
-- Используется фреймворк [reveal.js](https://revealjs.com/)
-- Используется [тема](https://revealjs.com/themes/) `beige`
-
-## Код для формата `html`
-
-- Тема задаётся в файле `Makefile`
-
-```make
-REVEALJS_THEME = beige 
+```julia
+particles = [get_random_particle(10, 1) for _ in 1:1000] #1
+for i in 1:100
+    apply_particle_forces(particles, dt) #2
+end
 ```
-# Результаты
 
-## Получающиеся форматы
+## Генерация частиц
 
-- Полученный `pdf`-файл можно демонстрировать в любой программе просмотра `pdf`
-- Полученный `html`-файл содержит в себе все ресурсы: изображения, css, скрипты
+\footnotesize
+```julia
+function get_random_particle(radius_max, angular_speed)::Particle
+    radius = sqrt(Random.rand()) * radius_max
+    angle = Random.rand() * 2 * pi
+    x = radius * cos(angle)
+    y = radius * sin(angle)
+    vx = -y * angular_speed * (radius_max / radius)^(3/2)
+    vy = x * angular_speed * (radius_max / radius)^(3/2)
+    Particle([x,y], [vx,vy], Random.rand() * max_mass, Random.rand() * max_radius)
+end
+```
 
-# Элементы презентации
+## Расчет сил
 
-## Актуальность
+\footnotesize
+```julia
+for src_part in particles
+    force = [0.0, 0.0]
+    for dst_part in particles
+        if src_part === dst_part
+            continue
+        end
+        extra_force = normalize(src_part.position - dst_part.position) * universal_gravitation_const * (src_part.mass * dst_part.mass) / magnitude(src_part.position - dst_part.position)
+        force += extra_force
+    end
+end
+```
 
-- Даёт понять, о чём пойдёт речь
-- Следует широко и кратко описать проблему
-- Мотивировать свое исследование
-- Сформулировать цели и задачи
-- Возможна формулировка ожидаемых результатов
+## Движение под воздействием сил
 
-## Цели и задачи
-
-- Не формулируйте более 1--2 целей исследования
-
-## Материалы и методы
-
-- Представляйте данные качественно
-- Количественно, только если крайне необходимо
-- Излишние детали не нужны
-
-## Содержание исследования
-
-- Предлагаемое решение задач исследования с обоснованием
-- Основные этапы работы
+```julia
+src_part.velocity += force * dt
+src_part.position += src_part.velocity * dt
+```
 
 ## Результаты
 
-- Не нужны все результаты
-- Необходимы логические связки между слайдами
-- Необходимо показать понимание материала
 
+| Количесто частиц | Количество шагов | Время  |
+|------------------|------------------|--------|
+| 1000             | 100              | 80с    |
+| 5000             | 50               | 14м47с |
 
-## Итоговый слайд
+# Rust && Julia
 
-- Запоминается последняя фраза. © Штирлиц
-- Главное сообщение, которое вы хотите донести до слушателей
-- Избегайте использовать последний слайд вида *Спасибо за внимание*
+## Частица
 
-# Рекомендации
+```julia
+struct Vec2
+    x::Float64
+    y::Float64
+end
 
-## Принцип 10/20/30
+struct Particle
+    id::UInt64
+    position::Vec2
+    velocity::Vec2
+    mass::Float64
+    radius::Float64
+end
+```
 
-  - 10 слайдов
-  - 20 минут на доклад
-  - 30 кегль шрифта
+## Генерация частиц
 
-## Связь слайдов
+\footnotesize
+```julia
+function get_random_particle(radius_max, angular_speed, i)::Particle
+    radius = sqrt(Random.rand()) * radius_max
+    angle = Random.rand() * 2 * pi
+    x = radius * cos(angle)
+    y = radius * sin(angle)
+    vx = -y * angular_speed * (radius_max / radius)^(3/2)
+    vy = x * angular_speed * (radius_max / radius)^(3/2)
+    mass = Random.rand() * max_part_mass
+    density = Random.rand() * (max_density - min_density) + min_density
+    volume = mass / density
+    radius = cbrt((3/4pi) * volume)
+    Particle(i, Vec2(x,y), Vec2(vx,vy), mass, radius)
+end
+```
 
-::: incremental
+## Основной цикл
 
-- Один слайд --- одна мысль
-- Нельзя ссылаться на объекты, находящиеся на предыдущих слайдах (например, на формулы)
-- Каждый слайд должен иметь заголовок
+\footnotesize
+```julia
+function perform_timesteps(particles::Vector{Particle}, steps)
+    # skipped: create and initialize the array with default values
 
-:::
+    sym = Libdl.dlsym(LIB, :perform_timesteps)
+    @ccall $sym(step_array::Ptr{Ptr{Particle}}, particle_count::Csize_t, step_count::Csize_t)::Cvoid
 
-## Количество сущностей
+    # # save simulation results
+    # f = open(io -> write(io, JSON.json(step_array)), "output.json", write=true)
+    step_array
+end
+```
 
-::: incremental
+## Симуляция
 
-- Человек может одновременно помнить $7 \pm 2$ элемента
-- При размещении информации на слайде старайтесь чтобы в сумме слайд содержал не более 5 элементов
-- Можно группировать элементы так, чтобы визуально было не более 5 групп
+\footnotesize
+```rust
+pub extern "C" fn perform_timesteps(data: *mut *mut Particle, particle_count: usize, step_count: usize) {
+    let dt = 0.001; let mut living_particles = particle_count;
+    for src_count in 0..step_count - 1 {
+        let [src, dst] = &mut particle_slice_list[src_count..=src_count + 1];
+        dst.copy_from_slice(src);
 
-:::
+        dst[..living_particles].chunks_mut(10).for_each(|dst| {
+            apply_particle_forces(&src[..living_particles], dst, dt);
+        });
 
-## Общие рекомендации
+        let glued_particles = run_glue(dst);
+        if glued_particles > 0 {
+            sort_zeroed(dst);
+            living_particles -= glued_particles;
+        }
+    }
+}
+```
 
-::: incremental
+## Расчет сил и движение частиц
 
-- На слайд выносится та информация, которая без зрительной опоры воспринимается хуже
-- Слайды должны дополнять или обобщать содержание выступления или его частей, а не дублировать его
-- Информация на слайдах должна быть изложена кратко, чётко и хорошо структурирована
-- Слайд не должен быть перегружен графическими изображениями и текстом
-- Не злоупотребляйте анимацией и переходами
+\footnotesize
+```rust
+pub fn apply_particle_forces( all_src_particles: &[Particle], my_particles: &mut [Particle], dt: f64) {
+    for src in my_particles.iter_mut() {
+        let mut force = Vec2::new(0.0, 0.0);
+        for dst in all_src_particles.iter() {
+            let extra_force = (dst.position - src.position).normalize()
+                * UNIVERSAL_GRAVITATION
+                * ((src.mass * dst.mass) / (src.position - dst.position).magnitude());
+            force += extra_force;
+        }
+        src.velocity += force * dt;
+        src.position += src.velocity * dt;
+    }
+}
+```
 
-:::
+## Слипание частиц
 
-## Представление данных
+\footnotesize
+```rust
+pub fn glue_to_other(&mut self, other: &mut Self) {
+    self.position = ((self.position * self.mass) + (other.position * other.mass))
+        / (self.mass + other.mass);
+    self.velocity = ((self.velocity * self.mass) + (other.velocity * other.mass))
+        / (self.mass + other.mass);
+    self.mass += other.mass;
+    self.radius = f64::cbrt(self.radius.powi(3) + other.radius.powi(3));
+    other.velocity = Vec2::new(0.0, 0.0);
+    other.radius = 0.0;
+    other.mass = 0.0;
+}
+```
 
-::: incremental
+# Сравнение с Julia
 
-- Лучше представить в виде схемы
-- Менее оптимально представить в виде рисунка, графика, таблицы
-- Текст используется, если все предыдущие способы отображения информации не подошли
+| Количесто частиц | Количество шагов | Julia  | Julia+Rust  |
+|------------------|------------------|--------|-------|
+| 1000             | 100              | 80с    | 5.6c  |
+| 5000             | 50               | 14м47с | 17.6c |
 
-:::
+# Визуализация
 
+\footnotesize
+```rust
+fn rdp(points: &[TimeSeriesPoint], epsilon: f64, result: &mut Vec<TimeSeriesPoint>) {
+    let n = points.len(); let mut max_dist = 0.0; let mut index = 0;
+    for i in 1..n - 1 {
+        let dist = perpendicular_distance(&points[i], &points[0], &points[n - 1]);
+        if dist > max_dist {
+            max_dist = dist;
+            index = i;
+        }
+    }
+    if max_dist > epsilon {
+        rdp(&points[0..=index], epsilon, result);
+        rdp(&points[index..n], epsilon, result);
+    } else {
+        result.push(points[n - 1]);
+    }
+}
+```
+
+# Выводы
+
+На этом этапе проекта мы смогли сделать программу, которая считает динамику системы частиц достаточно быстро, чтобы можно было попробовать различные варианты начальных конфигураций и сделать анализ свойств солнечной системы. Это потребует отслеживания метрик симуляции (вроде общей энергии системы) и визуализаций с помощью Blender.
