@@ -34,7 +34,7 @@ open('meta.json','w').write(json.dumps(meta))
 if os.path.exists("work.json"):
     print("Skipping upload to Youtube of work")
 else:
-    if os.system(f'./youtubeuploader -filename "{work}" -metaJSON meta.json -metaJSONout work.json'): exit()
+    if os.system(f'./youtubeuploader -filename "{work}" -metaJSON meta.json -metaJSONout work.json -oAuthPort 8081'): exit()
 
 work_meta = json.load(open("work.json"))
 
@@ -49,7 +49,7 @@ open('meta.json','w').write(json.dumps(meta))
 if os.path.exists("present.json"):
     print("Skipping upload to Youtube of present")
 else:
-    if os.system(f'./youtubeuploader -filename "{present}"  -metaJSON meta.json -metaJSONout present.json'): exit()
+    if os.system(f'./youtubeuploader -filename "{present}"  -metaJSON meta.json -metaJSONout present.json -oAuthPort 8081'): exit()
 
 present_meta = json.load(open("present.json"))
 
