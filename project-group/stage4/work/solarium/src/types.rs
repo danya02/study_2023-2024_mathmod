@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[repr(C)]
 pub struct InteropData {
-    pub initial_state: Vec<Particle>,
+    pub current_state: Vec<Particle>,
     pub current_timestep: usize,
     pub current_living_particles: usize,
     pub timestep_states: Vec<Vec<Particle>>,
@@ -38,9 +38,9 @@ pub struct TimeSeriesPoint {
 pub struct ParticleTimeSeriesSet {
     pub position_x: Vec<TimeSeriesPoint>,
     pub position_y: Vec<TimeSeriesPoint>,
-    pub velocity_x: Vec<TimeSeriesPoint>,
-    pub velocity_y: Vec<TimeSeriesPoint>,
-    pub mass: Vec<TimeSeriesPoint>,
+    // pub velocity_x: Vec<TimeSeriesPoint>,
+    // pub velocity_y: Vec<TimeSeriesPoint>,
+    // pub mass: Vec<TimeSeriesPoint>,
     pub radius: Vec<TimeSeriesPoint>,
 }
 

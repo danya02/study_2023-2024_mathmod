@@ -1,5 +1,5 @@
 {
     "rust-analyzer.linkedProjects": [
-        "project-group/stage3/work/solarium/Cargo.toml"
+        "project-group/stage4/work/solarium/Cargo.toml"
     ]
 }

@@ -71,7 +71,7 @@ pub fn run_glue(dst_particles: &mut [Particle]) -> usize {
 
 pub fn sort_zeroed(particles: &mut [Particle]) {
     // Parallelizable
-    particles.sort_unstable_by(|a, b| {
+    particles.par_sort_unstable_by(|a, b| {
         if a.radius == 0.0 {
             Ordering::Greater
         } else if b.radius == 0.0 {
@@ -128,7 +128,7 @@ pub extern "C" fn perform_timesteps(data: *mut InteropData, step_count: u64, dt:
         }
 
         timeit("glue particles", || {
-            let glued_particles = run_glue(dst);
+            let glued_particles = run_glue(&mut dst[0..data.current_living_particles]);
             if glued_particles > 0 {
                 sort_zeroed(dst);
                 data.current_living_particles -= glued_particles;
@@ -149,9 +149,11 @@ pub extern "C" fn perform_timesteps(data: *mut InteropData, step_count: u64, dt:
         timeit("apply particle forces", || {
             // Parallelizable
 
-            dst.chunks_mut(100).for_each(|dst_chunk| {
-                apply_particle_forces(&src, dst_chunk, dt as Num);
-            })
+            dst[0..data.current_living_particles]
+                .par_chunks_mut(10)
+                .for_each(|dst_chunk| {
+                    apply_particle_forces(&src, dst_chunk, dt as Num);
+                })
         });
 
         #[cfg(debug_assertions)]

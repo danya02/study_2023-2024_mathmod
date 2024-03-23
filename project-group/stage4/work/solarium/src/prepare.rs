@@ -18,12 +18,12 @@ pub extern "C" fn initialize_particles(
     //         .push(Particle::make_random(radius_max, angular_speed, id))
     // }
 
-    data.initial_state = (0..count)
+    data.current_state = (0..count)
         .into_par_iter()
         .map(|id| Particle::make_random(radius_max as Num, angular_speed as Num, id))
         .collect();
     data.current_living_particles = count as usize;
-    data.timestep_states.push(data.initial_state.clone());
+    data.timestep_states.push(data.current_state.clone());
 }
 
 // #[no_mangle]
@@ -48,7 +48,7 @@ pub extern "C" fn save_to_file(data: *mut InteropData, dest: *const i8) {
         .truncate(true)
         .open(dest.to_string_lossy().to_string())
         .unwrap();
-    let file = std::io::BufWriter::with_capacity(128 * 1024, file);
+    let file = std::io::BufWriter::with_capacity(128 * 1024 * 1024, file);
     postcard::to_io(&data, file).unwrap();
 }
 
@@ -61,9 +61,8 @@ pub extern "C" fn load_from_file(data: *mut InteropData, dest: *const i8) {
         .read(true)
         .open(dest.to_string_lossy().to_string())
         .unwrap();
-    let file = std::io::BufReader::with_capacity(128 * 1024, file);
-    let mut mem = [0; 16386];
-    *data = postcard::from_io((file, &mut mem)).unwrap().0;
+    let file = std::io::BufReader::with_capacity(128 * 1024 * 1024, file);
+    *data = serde_json::from_reader::<_, InteropData>(file).unwrap();
 }
 
 #[no_mangle]
@@ -77,6 +76,6 @@ pub extern "C" fn save_as_json(data: *mut InteropData, dest: *const i8) {
         .truncate(true)
         .open(dest.to_string_lossy().to_string())
         .unwrap();
-    let file = std::io::BufWriter::with_capacity(128 * 1024, file);
+    let file = std::io::BufWriter::with_capacity(128 * 1024 * 1024, file);
     serde_json::to_writer(file, data).unwrap();
 }
