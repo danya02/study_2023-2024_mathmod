@@ -2,7 +2,14 @@ use std::ffi::CStr;
 
 use rayon::prelude::*;
 
-use crate::{particle::Particle, types::InteropData, Num};
+use crate::{
+    manip::calculate_energies,
+    particle::Particle,
+    types::{InteropData, TimestepState},
+    Num,
+};
+
+const UNIVERSAL_GRAVITATION: Num = 6.674e-11 * 2e10;
 
 #[no_mangle]
 pub extern "C" fn initialize_particles(
@@ -18,12 +25,22 @@ pub extern "C" fn initialize_particles(
     //         .push(Particle::make_random(radius_max, angular_speed, id))
     // }
 
-    data.current_state = (0..count)
+    data.dt = 0.01;
+    data.universal_gravitational_constant = UNIVERSAL_GRAVITATION;
+    data.timestep_states.clear();
+
+    let particles = (0..count)
         .into_par_iter()
         .map(|id| Particle::make_random(radius_max as Num, angular_speed as Num, id))
-        .collect();
-    data.current_living_particles = count as usize;
-    data.timestep_states.push(data.current_state.clone());
+        .collect::<Vec<_>>();
+    let energies = calculate_energies(&particles, UNIVERSAL_GRAVITATION);
+    let state = TimestepState {
+        time: 0.0,
+        particles,
+        living_particles: count as usize,
+        particle_energies: energies,
+    };
+    data.timestep_states.push(state);
 }
 
 // #[no_mangle]

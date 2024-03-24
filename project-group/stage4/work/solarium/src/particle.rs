@@ -90,6 +90,10 @@ impl Particle {
         }
         false
     }
+
+    pub fn distance_to(&self, p: &Self) -> Num {
+        (self.position - p.position).magnitude()
+    }
 }
 
 #[no_mangle]

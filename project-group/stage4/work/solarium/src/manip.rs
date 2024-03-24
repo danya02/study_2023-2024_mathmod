@@ -2,16 +2,52 @@ use std::cmp::Ordering;
 
 use rayon::prelude::*;
 
-use crate::{particle::Particle, timeit, types::InteropData, vec2::Vec2, Num};
+use crate::{
+    particle::Particle,
+    timeit,
+    types::{InteropData, ParticleEnergy, TimestepState},
+    vec2::Vec2,
+    Num,
+};
 
-const UNIVERSAL_GRAVITATION: Num = 6.674e-11 * 2e10;
+fn calc_kinetic_energy(p: &Particle) -> Num {
+    let velocity = p.velocity.magnitude() as Num;
+    0.5 * p.mass * velocity.powi(2)
+}
+fn calc_potential_energy(p: &Particle, others: &[Particle], g_const: Num) -> Num {
+    let gp = -g_const * p.mass;
+    others
+        .par_iter()
+        .map(|other| {
+            if other.id == p.id {
+                0.0
+            } else {
+                gp * other.mass / other.distance_to(p)
+            }
+        })
+        .sum()
+}
+
+pub fn calculate_energies(particles: &[Particle], g_const: Num) -> Vec<ParticleEnergy> {
+    let mut dst = Vec::with_capacity(particles.len());
+    particles
+        .par_iter()
+        .map(|particle| {
+            let kinetic = calc_kinetic_energy(particle);
+            let potential = calc_potential_energy(particle, particles, g_const);
+            ParticleEnergy { potential, kinetic }
+        })
+        .collect_into_vec(&mut dst);
+    dst
+}
 
 /// all_src_particles is a view of all the particles that exist
 /// my_particles is a slice of the particles that I ought to edit
 pub fn apply_particle_forces(
-    all_src_particles: &[Particle],
+    all_src_particles: &TimestepState,
     my_particles: &mut [Particle],
     dt: Num,
+    g_const: Num,
 ) {
     for src in my_particles.iter_mut() {
         let old_src = *src;
@@ -19,7 +55,7 @@ pub fn apply_particle_forces(
             continue;
         }
         let mut force = Vec2::new(0.0, 0.0);
-        for dst in all_src_particles.iter() {
+        for dst in all_src_particles.particles.iter() {
             if src.id == dst.id {
                 continue;
             }
@@ -28,7 +64,7 @@ pub fn apply_particle_forces(
                 panic!("Distance between {src:?} and {dst:?} is zero");
             }
             let extra_force = (dst.position - src.position).normalize()
-                * UNIVERSAL_GRAVITATION
+                * g_const
                 * ((src.mass * dst.mass) / (src.position - dst.position).magnitude());
             let old_force = force;
             force += extra_force;
@@ -38,7 +74,8 @@ pub fn apply_particle_forces(
                 panic!("Force {force:?} is not finite; was {old_force:?}; extra force is {extra_force:?}");
             }
         }
-        src.velocity += force * dt;
+        let acceleration = force / src.mass;
+        src.velocity += acceleration * dt;
         src.position += src.velocity * dt;
 
         #[cfg(debug_assertions)]
@@ -83,64 +120,60 @@ pub fn sort_zeroed(particles: &mut [Particle]) {
 }
 
 #[no_mangle]
-pub extern "C" fn perform_timesteps(data: *mut InteropData, step_count: u64, dt: f64) -> u64 {
+pub extern "C" fn perform_timesteps(data: *mut InteropData, step_count: u64) -> u64 {
     let data = unsafe { &mut *data };
 
     // current_timestep is the index of the timestep array that's populated;
     // the next one needs to be edited.
 
-    // For the first time only, we'll remove all dead particles from the next step.
-    timeit("delete dead particles", || {
-        data.timestep_states.push(vec![]);
-        let [src, dst] =
-            &mut data.timestep_states[data.current_timestep..=data.current_timestep + 1]
-        else {
-            unreachable!()
-        };
-
-        for item in src {
-            // Assuming the dead particles are already sorted to the end
-            if item.is_zeroed() {
-                break;
-            }
-            dst.push(*item);
-        }
-        println!("Living particles at start: {}", dst.len());
-    });
+    // // For the first time only, we'll remove all dead particles from the next step.
 
     for _ in 0..step_count - 1 {
-        println!("Current step: {}", data.current_timestep);
-        // src is the last completed step
-        // Dst is already populated with a copy of src
-        // next_dst doesn't exist: we push it here
-        data.timestep_states.push(vec![]);
-        let [src, dst, next_dst] =
-            &mut data.timestep_states[data.current_timestep..=data.current_timestep + 2]
-        else {
-            unreachable!()
-        };
+        // data.current_state is the latest completed state
+        // dst is the state we're mutating:
+        // at the start it's equal to current_state.
+        let src = data.latest();
+        let mut dst: TimestepState = data.latest().clone();
+        dst.time += data.dt;
+        println!();
+        println!("Current step: {}", dst.time);
 
         #[cfg(debug_assertions)]
-        for part in dst.iter() {
+        for part in dst.particles.iter() {
             if !part.is_finite() {
                 panic!("!! {part:?} is not finite at start");
             }
         }
 
+        // Delete all particles that became dead on the last step:
+        // that way there'll be a single frame where they're witnessed dead.
+
+        timeit("delete dead particles", || {
+            let old = &dst.particles;
+            let mut new = Vec::with_capacity(old.len());
+
+            for item in old {
+                // Assuming the dead particles are already sorted to the end
+                if item.is_zeroed() {
+                    break;
+                }
+                new.push(*item);
+            }
+            dst.particles = new;
+            // Energies aren't updated here: we'll update them separately at the end.
+        });
+
         timeit("glue particles", || {
-            let glued_particles = run_glue(&mut dst[0..data.current_living_particles]);
+            let glued_particles = run_glue(&mut dst.particles);
             if glued_particles > 0 {
-                sort_zeroed(dst);
-                data.current_living_particles -= glued_particles;
-                println!(
-                    "step {}: {} living",
-                    data.current_timestep, data.current_living_particles
-                );
+                sort_zeroed(&mut dst.particles);
+                dst.living_particles -= glued_particles;
+                println!("step {}: {} living", dst.time, dst.living_particles);
             }
         });
 
         #[cfg(debug_assertions)]
-        for part in dst.iter() {
+        for part in dst.particles.iter() {
             if !part.is_finite() {
                 panic!("!! {part:?} is not finite after gluing");
             }
@@ -149,25 +182,33 @@ pub extern "C" fn perform_timesteps(data: *mut InteropData, step_count: u64, dt:
         timeit("apply particle forces", || {
             // Parallelizable
 
-            dst[0..data.current_living_particles]
+            dst.particles[0..dst.living_particles]
                 .par_chunks_mut(10)
                 .for_each(|dst_chunk| {
-                    apply_particle_forces(&src, dst_chunk, dt as Num);
+                    apply_particle_forces(
+                        &src,
+                        dst_chunk,
+                        data.dt,
+                        data.universal_gravitational_constant,
+                    );
                 })
         });
 
         #[cfg(debug_assertions)]
-        for part in dst.iter() {
+        for part in dst.particles.iter() {
             if !part.is_finite() {
                 panic!("!! {part:?} is not finite after motion");
             }
         }
 
-        // At the end of the operation, we copy the dst into a slot following it.
-        data.current_timestep += 1;
-        next_dst.clear();
-        next_dst.extend_from_slice(&dst);
+        // At the end, update the energy vector.
+        timeit("calculate particle energies", || {
+            dst.particle_energies =
+                calculate_energies(&dst.particles, data.universal_gravitational_constant);
+        });
+
+        data.timestep_states.push(dst);
     }
 
-    data.current_living_particles as u64
+    data.timestep_states.last().unwrap().living_particles as u64
 }

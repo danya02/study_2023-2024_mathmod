@@ -2,13 +2,21 @@ use std::ffi::CString;
 
 use solarium::types::InteropData;
 
+macro_rules! str {
+    ($data:tt) => {
+        CString::new($data).unwrap().as_bytes_with_nul().as_ptr() as *const i8
+    };
+}
+
 fn main() {
     let mut data = [0u8; std::mem::size_of::<InteropData>()];
     let data = data.as_mut_ptr() as *mut InteropData;
     let count: u64 = std::env::args().last().unwrap().parse().unwrap();
     solarium::types::prepare_interop_buf(data);
+    solarium::prepare::initialize_particles(data, 1000, 1000.0, 1.0);
+
     if count == 0 {
-        solarium::prepare::initialize_particles(data, 1_000, 1000.0, 0.05);
+        solarium::prepare::initialize_particles(data, 10_000, 1000.0, 0.05);
     } else {
         solarium::prepare::load_from_file(
             data,
@@ -18,7 +26,7 @@ fn main() {
                 .as_ptr() as *const i8,
         );
     }
-    solarium::manip::perform_timesteps(data, 100, 0.1);
+    solarium::manip::perform_timesteps(data, 1000);
     solarium::prepare::save_as_json(
         data,
         CString::new(format!("{}-snapshot.json", count + 1))

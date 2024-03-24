@@ -3,13 +3,34 @@ use std::collections::HashMap;
 use crate::{particle::Particle, Num};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
 #[repr(C)]
 pub struct InteropData {
-    pub current_state: Vec<Particle>,
-    pub current_timestep: usize,
-    pub current_living_particles: usize,
-    pub timestep_states: Vec<Vec<Particle>>,
+    pub universal_gravitational_constant: Num,
+    pub dt: Num,
+    pub timestep_states: Vec<TimestepState>,
+}
+
+impl InteropData {
+    pub fn latest(&self) -> &TimestepState {
+        &self.timestep_states.last().unwrap()
+    }
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+#[repr(C)]
+pub struct TimestepState {
+    pub time: Num,
+    pub particles: Vec<Particle>,
+    pub living_particles: usize,
+    pub particle_energies: Vec<ParticleEnergy>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Copy)]
+#[repr(C)]
+pub struct ParticleEnergy {
+    pub potential: Num,
+    pub kinetic: Num,
 }
 
 #[no_mangle]
@@ -38,9 +59,6 @@ pub struct TimeSeriesPoint {
 pub struct ParticleTimeSeriesSet {
     pub position_x: Vec<TimeSeriesPoint>,
     pub position_y: Vec<TimeSeriesPoint>,
-    // pub velocity_x: Vec<TimeSeriesPoint>,
-    // pub velocity_y: Vec<TimeSeriesPoint>,
-    // pub mass: Vec<TimeSeriesPoint>,
     pub radius: Vec<TimeSeriesPoint>,
 }
 

@@ -11,7 +11,7 @@ use crate::{
 pub fn build_timeseries(data: &InteropData) -> TimeSeriesSet {
     let mut particles = HashMap::new();
     for (frameidx, framedata) in data.timestep_states.iter().enumerate() {
-        for particle in framedata.iter() {
+        for particle in framedata.particles.iter() {
             let this_series: &mut ParticleTimeSeriesSet = particles.entry(particle.id).or_default();
             this_series.position_x.push(TimeSeriesPoint {
                 x: frameidx,
@@ -21,22 +21,10 @@ pub fn build_timeseries(data: &InteropData) -> TimeSeriesSet {
                 x: frameidx,
                 y: particle.position.y,
             });
-            // this_series.velocity_x.push(TimeSeriesPoint {
-            //     x: frameidx,
-            //     y: particle.velocity.x,
-            // });
-            // this_series.velocity_y.push(TimeSeriesPoint {
-            //     x: frameidx,
-            //     y: particle.velocity.y,
-            // });
             this_series.radius.push(TimeSeriesPoint {
                 x: frameidx,
                 y: particle.radius,
             });
-            // this_series.mass.push(TimeSeriesPoint {
-            //     x: frameidx,
-            //     y: particle.mass,
-            // });
         }
     }
     TimeSeriesSet(particles)
