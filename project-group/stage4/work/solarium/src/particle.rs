@@ -12,32 +12,35 @@ pub struct Particle {
 }
 
 impl Particle {
-    const MASS: (Num, Num) = (0.0, 0.7);
+    // const MASS: (Num, Num) = (100000.0, 100000.0000000001);
+    // const DENSITY: (Num, Num) = (0.1, 0.1000000001);
+
+    const MASS: (Num, Num) = (0.0, 2.0);
     const DENSITY: (Num, Num) = (0.1, 1.3);
 
     pub fn make_random(radius_max: Num, angular_speed: Num, id: u64) -> Self {
-        let radius = Num::sqrt(rand::random()) * radius_max;
-        let angle: Num = rand::random();
-        let angle = angle * (std::f64::consts::PI as Num) * 2.0;
+        let position_radius = Num::sqrt(rand::random()) * radius_max;
+        let position_angle: Num = rand::random();
+        let angle = position_angle * (std::f64::consts::PI as Num) * 2.0;
 
         let (s, c) = f64::sin_cos(angle as f64);
 
-        let (x, y) = (radius * c as Num, radius * s as Num);
+        let (x, y) = (position_radius * c as Num, position_radius * s as Num);
 
-        let vx = -y * angular_speed * (radius_max / radius).powf(1.5);
-        let vy = x * angular_speed * (radius_max / radius).powf(1.5);
+        let vx = -y * angular_speed * (radius_max / position_radius).powf(1.5);
+        let vy = x * angular_speed * (radius_max / position_radius).powf(1.5);
 
-        let mass = rand::random::<Num>() / (Self::MASS.1 - Self::MASS.0) + Self::MASS.0;
+        let mass = (rand::random::<Num>() / (Self::MASS.1 - Self::MASS.0)) + Self::MASS.0;
         let my_density =
-            rand::random::<Num>() / (Self::DENSITY.1 - Self::DENSITY.0) + Self::DENSITY.0;
+            (rand::random::<Num>() / (Self::DENSITY.1 - Self::DENSITY.0)) + Self::DENSITY.0;
         let my_volume = mass / my_density;
-        let radius = Num::cbrt(0.75 * (std::f64::consts::PI as Num) * my_volume);
+        let my_radius = Num::cbrt(0.75 * (std::f64::consts::PI as Num) * my_volume);
         Self {
             id,
             position: Vec2::new(x, y),
             velocity: Vec2::new(vx, vy),
             mass,
-            radius,
+            radius: my_radius,
             zeroed: false,
         }
     }
@@ -85,14 +88,20 @@ impl Particle {
         }
 
         if displacement.magnitude() < radius_sum {
+            // println!("Before: self: {self:?}\nother: {other:?}");
             self.glue_to_other(other);
+            // println!("After: self: {self:?}\nother: {other:?}");
+            // std::thread::sleep_ms(10000);
             return true;
         }
         false
     }
 
     pub fn distance_to(&self, p: &Self) -> Num {
-        (self.position - p.position).magnitude()
+        self.distance_to_squared(p).sqrt()
+    }
+    pub fn distance_to_squared(&self, p: &Self) -> Num {
+        (self.position - p.position).magnitude_squared()
     }
 }
 

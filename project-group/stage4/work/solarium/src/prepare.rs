@@ -9,7 +9,7 @@ use crate::{
     Num,
 };
 
-const UNIVERSAL_GRAVITATION: Num = 6.674e-11 * 2e10;
+const UNIVERSAL_GRAVITATION: Num = 6.674e-11 * 2e15;
 
 #[no_mangle]
 pub extern "C" fn initialize_particles(

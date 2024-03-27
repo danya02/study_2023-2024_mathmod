@@ -14,8 +14,12 @@ impl Vec2 {
         Vec2 { x, y }
     }
 
+    pub fn magnitude_squared(&self) -> Num {
+        self.x.powi(2) + self.y.powi(2)
+    }
+
     pub fn magnitude(&self) -> Num {
-        Num::sqrt(self.x.powi(2) + self.y.powi(2))
+        Num::sqrt(self.magnitude_squared())
     }
     pub fn normalize(&self) -> Self {
         let mag = self.magnitude();

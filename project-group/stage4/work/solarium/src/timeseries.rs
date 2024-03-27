@@ -31,7 +31,7 @@ pub fn build_timeseries(data: &InteropData) -> TimeSeriesSet {
 }
 
 fn minify(mut src: TimeSeriesSet) -> TimeSeriesSet {
-    let epsilon = 0.1;
+    let epsilon = 0.01;
     timeit("minify position X", || {
         src.0.par_iter_mut().for_each(|(_id, datas)| {
             datas.position_x = decimate::ramer_douglas_peucker(&datas.position_x, epsilon)
@@ -85,7 +85,8 @@ pub extern "C" fn save_data_to_timeseries(data: *mut InteropData, dst_path: *con
 
     let minified_series = timeit("convert and minify timeseries", move || {
         let series = timeit("convert data to big timeseries", || build_timeseries(data));
-        minify(series)
+        let series = minify(series);
+        series
     });
     let mut file = std::io::BufWriter::with_capacity(128 * 1024 * 1024, file);
 

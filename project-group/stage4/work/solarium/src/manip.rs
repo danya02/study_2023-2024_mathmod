@@ -63,9 +63,11 @@ pub fn apply_particle_forces(
             if (dst.position - src.position).magnitude() == 0.0 {
                 panic!("Distance between {src:?} and {dst:?} is zero");
             }
-            let extra_force = (dst.position - src.position).normalize()
-                * g_const
-                * ((src.mass * dst.mass) / (src.position - dst.position).magnitude());
+            let force_factor =
+                (dst.position - src.position).normalize() * g_const * (src.mass * dst.mass);
+            let mag_sq = (src.position - dst.position).magnitude_squared();
+            let extra_force = (force_factor / mag_sq) - (force_factor / (mag_sq.powi(4)));
+
             let old_force = force;
             force += extra_force;
 
@@ -74,6 +76,8 @@ pub fn apply_particle_forces(
                 panic!("Force {force:?} is not finite; was {old_force:?}; extra force is {extra_force:?}");
             }
         }
+        // println!("Force: {force:?}");
+        // std::thread::sleep_ms(10);
         let acceleration = force / src.mass;
         src.velocity += acceleration * dt;
         src.position += src.velocity * dt;
@@ -163,22 +167,6 @@ pub extern "C" fn perform_timesteps(data: *mut InteropData, step_count: u64) -> 
             // Energies aren't updated here: we'll update them separately at the end.
         });
 
-        timeit("glue particles", || {
-            let glued_particles = run_glue(&mut dst.particles);
-            if glued_particles > 0 {
-                sort_zeroed(&mut dst.particles);
-                dst.living_particles -= glued_particles;
-                println!("step {}: {} living", dst.time, dst.living_particles);
-            }
-        });
-
-        #[cfg(debug_assertions)]
-        for part in dst.particles.iter() {
-            if !part.is_finite() {
-                panic!("!! {part:?} is not finite after gluing");
-            }
-        }
-
         timeit("apply particle forces", || {
             // Parallelizable
 
@@ -198,6 +186,22 @@ pub extern "C" fn perform_timesteps(data: *mut InteropData, step_count: u64) -> 
         for part in dst.particles.iter() {
             if !part.is_finite() {
                 panic!("!! {part:?} is not finite after motion");
+            }
+        }
+
+        timeit("glue particles", || {
+            let glued_particles = run_glue(&mut dst.particles);
+            if glued_particles > 0 {
+                sort_zeroed(&mut dst.particles);
+                dst.living_particles -= glued_particles;
+                println!("\tstep {}: {} living", dst.time, dst.living_particles);
+            }
+        });
+
+        #[cfg(debug_assertions)]
+        for part in dst.particles.iter() {
+            if !part.is_finite() {
+                panic!("!! {part:?} is not finite after gluing");
             }
         }
 
