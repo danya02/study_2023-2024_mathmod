@@ -15,7 +15,7 @@ fn main() {
     solarium::types::prepare_interop_buf(data);
 
     if count == 0 {
-        solarium::prepare::initialize_particles(data, 10_000, 1000.0, 0.25);
+        solarium::prepare::initialize_particles(data, 1_000, 1000.0, 0.0000000025);
     } else {
         solarium::prepare::load_from_file(
             data,

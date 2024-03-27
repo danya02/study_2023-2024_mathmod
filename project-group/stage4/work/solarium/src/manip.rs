@@ -15,14 +15,14 @@ fn calc_kinetic_energy(p: &Particle) -> Num {
     0.5 * p.mass * velocity.powi(2)
 }
 fn calc_potential_energy(p: &Particle, others: &[Particle], g_const: Num) -> Num {
-    let gp = -g_const * p.mass;
+    let gp = p.mass;
     others
         .par_iter()
         .map(|other| {
-            if other.id == p.id {
+            if other.id == p.id || p.is_zeroed() || other.is_zeroed() {
                 0.0
             } else {
-                gp * other.mass / other.distance_to(p)
+                gp * g_const * other.mass / (p.position - other.position).magnitude()
             }
         })
         .sum()
@@ -127,10 +127,17 @@ pub fn sort_zeroed(particles: &mut [Particle]) {
 pub extern "C" fn perform_timesteps(data: *mut InteropData, step_count: u64) -> u64 {
     let data = unsafe { &mut *data };
 
+
+       let dst = data.latest();
+       let kin:f64 = dst.particle_energies.iter().map(|v| v.kinetic).sum();
+       let pot:f64 = dst.particle_energies.iter().map(|v| v.potential).sum();
+
+        println!("START: Potential energy: {:?}, kinetic energy: {:?}", pot, kin);
+        let _ = dst;
+
+
     // current_timestep is the index of the timestep array that's populated;
     // the next one needs to be edited.
-
-    // // For the first time only, we'll remove all dead particles from the next step.
 
     for _ in 0..step_count - 1 {
         // data.current_state is the latest completed state
@@ -210,6 +217,11 @@ pub extern "C" fn perform_timesteps(data: *mut InteropData, step_count: u64) -> 
             dst.particle_energies =
                 calculate_energies(&dst.particles, data.universal_gravitational_constant);
         });
+
+       let kin:f64 = dst.particle_energies.iter().map(|v| v.kinetic).sum();
+       let pot:f64 = dst.particle_energies.iter().map(|v| v.potential).sum();
+
+        println!("Potential energy: {:?}, kinetic energy: {:?}", pot, kin);
 
         data.timestep_states.push(dst);
     }

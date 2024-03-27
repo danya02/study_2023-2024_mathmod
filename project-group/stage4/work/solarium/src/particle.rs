@@ -15,8 +15,8 @@ impl Particle {
     // const MASS: (Num, Num) = (100000.0, 100000.0000000001);
     // const DENSITY: (Num, Num) = (0.1, 0.1000000001);
 
-    const MASS: (Num, Num) = (0.0, 2.0);
-    const DENSITY: (Num, Num) = (0.1, 1.3);
+    const MASS: (Num, Num) = (0.0, 6.0);
+    const DENSITY: (Num, Num) = (0.001, 1.3);
 
     pub fn make_random(radius_max: Num, angular_speed: Num, id: u64) -> Self {
         let position_radius = Num::sqrt(rand::random()) * radius_max;

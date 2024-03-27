@@ -7,9 +7,10 @@ use crate::{
     particle::Particle,
     types::{InteropData, TimestepState},
     Num,
+    vec2::Vec2
 };
 
-const UNIVERSAL_GRAVITATION: Num = 6.674e-11 * 2e15;
+const UNIVERSAL_GRAVITATION: Num = 6.674e-11; //* 2e15;
 
 #[no_mangle]
 pub extern "C" fn initialize_particles(
@@ -25,14 +26,17 @@ pub extern "C" fn initialize_particles(
     //         .push(Particle::make_random(radius_max, angular_speed, id))
     // }
 
-    data.dt = 0.01;
+    data.dt = 0.01 * 1e7;
     data.universal_gravitational_constant = UNIVERSAL_GRAVITATION;
     data.timestep_states.clear();
 
-    let particles = (0..count)
+    let mut particles = (0..count)
         .into_par_iter()
         .map(|id| Particle::make_random(radius_max as Num, angular_speed as Num, id))
         .collect::<Vec<_>>();
+    particles.push(Particle{id: count+1, position: Vec2::new(0.0,0.0), velocity: Vec2::new(0.0,0.0), mass: 10.0, radius: 10.0, zeroed: false});
+
+
     let energies = calculate_energies(&particles, UNIVERSAL_GRAVITATION);
     let state = TimestepState {
         time: 0.0,
