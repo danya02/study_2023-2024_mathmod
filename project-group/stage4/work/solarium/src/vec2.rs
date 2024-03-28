@@ -3,7 +3,7 @@ use std::ops::{Add, AddAssign, Div, Mul, Sub};
 
 use crate::Num;
 
-#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize, Default)]
 pub struct Vec2 {
     pub x: Num,
     pub y: Num,

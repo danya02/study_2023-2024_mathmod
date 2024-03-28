@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{particle::Particle, Num};
+use crate::{manip::calculate_energies, particle::Particle, vec2::Vec2, Num};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
@@ -15,6 +15,9 @@ impl InteropData {
     pub fn latest(&self) -> &TimestepState {
         &self.timestep_states.last().unwrap()
     }
+    pub fn latest_mut(&mut self) -> &mut TimestepState {
+        self.timestep_states.last_mut().unwrap()
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
@@ -26,11 +29,18 @@ pub struct TimestepState {
     pub particle_energies: Vec<ParticleEnergy>,
 }
 
+impl TimestepState {
+    pub fn recalculate_energies(&mut self, g_const: f64) {
+        self.particle_energies = calculate_energies(&self.particles, g_const);
+    }
+}
+
 #[derive(Debug, Default, Serialize, Deserialize, Clone, Copy)]
 #[repr(C)]
 pub struct ParticleEnergy {
     pub potential: Num,
     pub kinetic: Num,
+    pub momentum: Vec2,
 }
 
 #[no_mangle]

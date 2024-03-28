@@ -10,9 +10,11 @@ use crate::{
     Num,
 };
 
-fn calc_kinetic_energy(p: &Particle) -> Num {
+fn calc_kinetic_energy(p: &Particle) -> (Num, Vec2) {
     let velocity = p.velocity.magnitude() as Num;
-    0.5 * p.mass * velocity.powi(2)
+    let e = 0.5 * p.mass * velocity.powi(2);
+    let m = p.velocity * p.mass;
+    (e, m)
 }
 fn calc_potential_energy(p: &Particle, others: &[Particle], g_const: Num) -> Num {
     let gp = p.mass;
@@ -33,9 +35,13 @@ pub fn calculate_energies(particles: &[Particle], g_const: Num) -> Vec<ParticleE
     particles
         .par_iter()
         .map(|particle| {
-            let kinetic = calc_kinetic_energy(particle);
+            let (kinetic, momentum) = calc_kinetic_energy(particle);
             let potential = calc_potential_energy(particle, particles, g_const);
-            ParticleEnergy { potential, kinetic }
+            ParticleEnergy {
+                potential,
+                kinetic,
+                momentum,
+            }
         })
         .collect_into_vec(&mut dst);
     dst
@@ -66,7 +72,8 @@ pub fn apply_particle_forces(
             let force_factor =
                 (dst.position - src.position).normalize() * g_const * (src.mass * dst.mass);
             let mag_sq = (src.position - dst.position).magnitude_squared();
-            let extra_force = (force_factor / mag_sq) - (force_factor / (mag_sq.powi(4)));
+            let extra_force = force_factor / mag_sq;
+            let extra_force = extra_force - (force_factor / (mag_sq.powi(4)));
 
             let old_force = force;
             force += extra_force;
@@ -81,6 +88,9 @@ pub fn apply_particle_forces(
         let acceleration = force / src.mass;
         src.velocity += acceleration * dt;
         src.position += src.velocity * dt;
+        // if src.velocity.magnitude_squared() < 0.000001 {
+        //     panic!("Velocity too low for particle {src:?}");
+        // }
 
         #[cfg(debug_assertions)]
         if !src.is_finite() {
@@ -127,17 +137,33 @@ pub fn sort_zeroed(particles: &mut [Particle]) {
 pub extern "C" fn perform_timesteps(data: *mut InteropData, step_count: u64) -> u64 {
     let data = unsafe { &mut *data };
 
+    {
+        let dst = data.latest();
+        let kin: f64 = dst.particle_energies.iter().map(|v| v.kinetic).sum();
+        let pot: f64 = dst.particle_energies.iter().map(|v| v.potential).sum();
 
-       let dst = data.latest();
-       let kin:f64 = dst.particle_energies.iter().map(|v| v.kinetic).sum();
-       let pot:f64 = dst.particle_energies.iter().map(|v| v.potential).sum();
+        println!(
+            "START: Potential energy: {:?}, kinetic energy: {:?}",
+            pot, kin
+        );
+    }
 
-        println!("START: Potential energy: {:?}, kinetic energy: {:?}", pot, kin);
-        let _ = dst;
+    // On the first frame, we glue the particles to get rid of any that intersect at the start.
+    // This should not happen in subsequent runs, only on the first one.
 
+    let g_const = data.universal_gravitational_constant;
+    timeit("Glue particles initially", || {
+        let ps = &mut data.latest_mut().particles;
+        let glued_particles = run_glue(ps);
+        if glued_particles > 0 {
+            sort_zeroed(ps);
+            data.latest_mut().living_particles -= glued_particles;
+            data.latest_mut().recalculate_energies(g_const);
+        }
+    });
 
     // current_timestep is the index of the timestep array that's populated;
-    // the next one needs to be edited.
+    // the next one needs to be edited and inserted.
 
     for _ in 0..step_count - 1 {
         // data.current_state is the latest completed state
@@ -214,12 +240,11 @@ pub extern "C" fn perform_timesteps(data: *mut InteropData, step_count: u64) -> 
 
         // At the end, update the energy vector.
         timeit("calculate particle energies", || {
-            dst.particle_energies =
-                calculate_energies(&dst.particles, data.universal_gravitational_constant);
+            dst.recalculate_energies(g_const);
         });
 
-       let kin:f64 = dst.particle_energies.iter().map(|v| v.kinetic).sum();
-       let pot:f64 = dst.particle_energies.iter().map(|v| v.potential).sum();
+        let kin: f64 = dst.particle_energies.iter().map(|v| v.kinetic).sum();
+        let pot: f64 = dst.particle_energies.iter().map(|v| v.potential).sum();
 
         println!("Potential energy: {:?}, kinetic energy: {:?}", pot, kin);
 
